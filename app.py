@@ -1,17 +1,8 @@
 import os
-import subprocess
 from flask import Flask, render_template, request, jsonify
 from src.rag import generate_answer, ASSISTANT_NAME
 
 app = Flask(__name__)
-
-def ensure_db():
-    if not os.path.exists("chroma_db"):
-        print("⚙️  Base vectorial no encontrada. Ejecutando ingesta...")
-        subprocess.run(["python", "src/ingestion.py"], check=True)
-        print("✅ Ingesta completada.")
-
-ensure_db()
 
 @app.route("/")
 def index():
