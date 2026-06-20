@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VíaLex — Asistente de Tránsito</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Syne:wght@700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-icon">🛣️</span>
+        <div>
+          <div class="brand-name">VíaLex</div>
+          <div class="brand-sub">Código Nacional de Tránsito</div>
+        </div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Documento base</div>
+        <div class="info-value">Ley 769 de 2002</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Modelo</div>
+        <div class="info-value">LLaMA 3.3 · 70B</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Embeddings</div>
+        <div class="info-value">all-MiniLM-L6-v2</div>
+      </div>
+      <div class="divider"></div>
+      <div class="tip">
+        <div class="tip-title">💡 Puedes preguntar sobre</div>
+        <ul>
+          <li>Límites de velocidad</li>
+          <li>Licencias de conducción</li>
+          <li>Infracciones y sanciones</li>
+          <li>Normas para peatones</li>
+          <li>Señales de tránsito</li>
+        </ul>
+      </div>
+      <div class="sidebar-footer">Especialización en Ciencia de Datos · UPTC</div>
+    </aside>
+
+    <main class="chat-area">
+      <div class="chat-header">
+        <div class="status-dot"></div>
+        <span>VíaLex está listo</span>
+      </div>
+      <div class="messages" id="messages">
+        <div class="message bot">
+          <div class="bubble">
+            Hola, soy <strong>VíaLex</strong>. Puedo responder preguntas sobre el <strong>Código Nacional de Tránsito de Colombia (Ley 769 de 2002)</strong>.<br><br>
+            Mis respuestas se basan exclusivamente en el texto del código. ¿En qué te puedo ayudar?
+          </div>
+        </div>
+      </div>
+      <div class="input-area">
+        <input type="text" id="input" placeholder="Escribe tu pregunta sobre el Código de Tránsito..." autocomplete="off" />
+        <button id="send-btn" onclick="sendMessage()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const input = document.getElementById("input");
+    const messages = document.getElementById("messages");
+    const sendBtn = document.getElementById("send-btn");
+
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) sendMessage();
+    });
+
+    function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      appendMessage(text, "user");
+      input.value = "";
+      sendBtn.disabled = true;
+      const typing = appendTyping();
+      fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+      })
+      .then(r => r.json())
+      .then(data => {
+        typing.remove();
+        let html = escapeHtml(data.answer).replace(/\n/g, "<br>");
+        if (data.pages && data.pages.length > 0) {
+          html += `<div class="pages">📄 Páginas consultadas: ${data.pages.join(", ")}</div>`;
+        }
+        appendBotMessage(html);
+        sendBtn.disabled = false;
+        input.focus();
+      })
+      .catch(() => {
+        typing.remove();
+        appendBotMessage("⚠️ Error de conexión. Intenta de nuevo.");
+        sendBtn.disabled = false;
+      });
+    }
+
+    function appendMessage(text, role) {
+      const div = document.createElement("div");
+      div.className = `message ${role}`;
+      div.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function appendBotMessage(html) {
+      const div = document.createElement("div");
+      div.className = "message bot";
+      div.innerHTML = `<div class="bubble">${html}</div>`;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function appendTyping() {
+      const div = document.createElement("div");
+      div.className = "message bot";
+      div.innerHTML = `<div class="bubble typing"><span></span><span></span><span></span></div>`;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+      return div;
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+  </script>
+</body>
+</html>
