@@ -234,9 +234,12 @@ python src/assistant.py
 ### Asistente en terminal
 ![Terminal](assets/terminal.png)
 
-### Interfaz web — respuestas del sistema
+### Interfaz web 
 ![chat respuesta 1](assets/chat_respuesta1.png)
+
+### —Respuestas del sistema 1-3
 ![Preguntas 1 a 3](assets/preguntas_1_3.png)
+### —Respuestas del sistema 4-5
 ![Preguntas 4 y 5](assets/preguntas_4_5.png)
 
 ### Rechazo de pregunta fuera del documento
