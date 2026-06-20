@@ -58,7 +58,6 @@ def retrieve(query, model, collection, top_k=TOP_K):
 
 # ── Generar respuesta con Groq ──────────────────────────────
 def generate_answer(query, chunks, groq_client):
-    # Sin chunks relevantes → respuesta directa sin llamar a la API
     if not chunks:
         return "Esta información no se encuentra en el Código Nacional de Tránsito consultado."
 
@@ -88,8 +87,10 @@ Responde basándote únicamente en el contexto anterior."""
     except Exception as e:
         return f"⚠️ No se pudo generar la respuesta (error de la API: {type(e).__name__}: {e}). Intenta de nuevo en unos segundos."
 
-    # Páginas agregadas programáticamente (no por el LLM)
-    answer += f"\n\n📄 Páginas consultadas: {', '.join(map(str, pages))}"
+    # Solo agregamos páginas si el LLM realmente encontró la respuesta en el contexto
+    no_encontrado = "no se encuentra en el código nacional de tránsito" in answer.lower()
+    if not no_encontrado:
+        answer += f"\n\n📄 Páginas consultadas: {', '.join(map(str, pages))}"
 
     return answer
 

@@ -15,11 +15,16 @@ SIMILARITY_THRESHOLD = 0.95
 
 ASSISTANT_NAME = "VíaLex"
 
-SYSTEM_PROMPT = """Eres VíaLex, asistente especializado en el Código Nacional de Tránsito de Colombia (Ley 769 de 2002).
+# Única fuente de verdad para el mensaje de "no encontrado".
+# Se usa tanto en el SYSTEM_PROMPT (para que el LLM la use textualmente)
+# como en generate_answer (para detectar si el LLM respondió eso).
+NOT_FOUND_MESSAGE = "Esta información no se encuentra en el Código Nacional de Tránsito consultado."
+
+SYSTEM_PROMPT = f"""Eres {ASSISTANT_NAME}, asistente especializado en el Código Nacional de Tránsito de Colombia (Ley 769 de 2002).
 
 Reglas estrictas:
 1. Responde ÚNICAMENTE con información del contexto proporcionado.
-2. Si la respuesta NO está en el contexto, di explícitamente: "Esta información no se encuentra en el Código Nacional de Tránsito consultado."
+2. Si la respuesta NO está en el contexto, di explícitamente, EXACTAMENTE y sin agregar nada más: "{NOT_FOUND_MESSAGE}"
 3. Sé claro, preciso y usa lenguaje accesible para cualquier ciudadano colombiano.
 4. No inventes artículos, cifras ni sanciones que no estén en el contexto.
 5. No incluyas al final la sección de páginas consultadas, eso se agrega automáticamente."""
@@ -60,11 +65,9 @@ def generate_answer(query):
     _, _, groq_client = get_resources()
     chunks = retrieve(query)
 
+    # Sin chunks relevantes → respuesta directa, sin llamar a la API ni mostrar páginas
     if not chunks:
-        return {
-            "answer": "Esta información no se encuentra en el Código Nacional de Tránsito consultado.",
-            "pages": []
-        }
+        return {"answer": NOT_FOUND_MESSAGE, "pages": []}
 
     context = "\n\n".join([f"[Página {c['page']}]\n{c['text']}" for c in chunks])
     pages = sorted(set(c["page"] for c in chunks))
@@ -92,5 +95,11 @@ Responde basándote únicamente en el contexto anterior."""
             "answer": f"⚠️ Error al generar respuesta: {type(e).__name__}. Intenta de nuevo.",
             "pages": []
         }
+
+    # Solo agregamos páginas si el LLM realmente encontró la respuesta en el contexto.
+    # Comparamos contra la misma constante que se le dio como instrucción exacta.
+    no_encontrado = NOT_FOUND_MESSAGE.lower() in answer.lower()
+    if no_encontrado:
+        return {"answer": NOT_FOUND_MESSAGE, "pages": []}
 
     return {"answer": answer, "pages": pages}
